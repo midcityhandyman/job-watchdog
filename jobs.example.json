@@ -1,0 +1,44 @@
+{
+  "jobs": [
+    {
+      "name": "nightly-backup",
+      "interval_minutes": 1440,
+      "grace_minutes": 60,
+      "max_runtime_minutes": 45
+    },
+    {
+      "name": "invoice-sync",
+      "interval_minutes": 60,
+      "grace_minutes": 15,
+      "max_runtime_minutes": 10
+    },
+    {
+      "name": "lead-import",
+      "interval_minutes": 30,
+      "grace_minutes": 10,
+      "allowed_exits": [
+        {
+          "code": 3,
+          "reason": "source inbox was empty, nothing to import",
+          "escalate_after": 6
+        }
+      ]
+    },
+    {
+      "name": "report-export",
+      "interval_minutes": 1440,
+      "grace_minutes": 120
+    },
+    {
+      "name": "cache-warm",
+      "interval_minutes": 15,
+      "grace_minutes": 5,
+      "max_runtime_minutes": 5
+    },
+    {
+      "name": "review-digest",
+      "interval_minutes": 10080,
+      "grace_minutes": 720
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+job-watchdog demo (synthetic history, fake clock, mock alert channel)
+registry: 6 jobs from jobs.example.json
+
+== Mon 08:59 UTC  first pass over 33 hours of history
+   raised 14, delivered to mock channel 14
+   [CRITICAL] invoice-sync: silence: no run for 5h 54m; expected every 1h 0m (grace 15m), overdue by 4h 39m
+   [INFO    ] lead-import: expected_exit: exit 3 is by design: source inbox was empty, nothing to import
+   [INFO    ] lead-import: expected_exit: exit 3 is by design: source inbox was empty, nothing to import
+   [INFO    ] lead-import: expected_exit: exit 3 is by design: source inbox was empty, nothing to import
+   [INFO    ] lead-import: expected_exit: exit 3 is by design: source inbox was empty, nothing to import
+   [INFO    ] lead-import: expected_exit: exit 3 is by design: source inbox was empty, nothing to import
+   [INFO    ] lead-import: expected_exit: exit 3 is by design: source inbox was empty, nothing to import
+   [INFO    ] lead-import: expected_exit: exit 3 is by design: source inbox was empty, nothing to import
+   [INFO    ] lead-import: expected_exit: exit 3 is by design: source inbox was empty, nothing to import
+   [WARNING ] lead-import: expected_exit_streak: exit 3 is whitelisted (source inbox was empty, nothing to import) but has now happened 6 runs in a row; check that it is still by design
+   [CRITICAL] report-export: failure: run 215 failed with exit 1 after 95.0s: PermissionError: cannot write /srv/reports/daily.csv
+   [WARNING ] cache-warm: stuck: run 231 started 14m ago and never finished (limit 5m); it is hung or it died without reporting
+   [WARNING ] review-digest: silence: registered but no run has ever been recorded; is it scheduled, and does it go through the wrapper?
+   [WARNING ] tmp-cleanup: unregistered: runs are being recorded for a job the registry does not list, so nobody is watching it for failure or silence
+
+   (run table held 231 runs at that point; healthy ones raised nothing)
+
+== Mon 09:00 UTC  second pass, nothing changed: no repeats
+   raised 0, delivered to mock channel 0
+
+== Mon 09:30 UTC  jobs fixed and rerun: recoveries
+   raised 4, delivered to mock channel 4
+   [INFO    ] invoice-sync: recovered: run 234 finished cleanly; closed: silence
+   [INFO    ] lead-import: recovered: run 233 finished cleanly; closed: expected_exit_streak
+   [INFO    ] report-export: recovered: run 236 finished cleanly; closed: failure
+   [INFO    ] cache-warm: recovered: run 232 finished cleanly; closed: stuck
+
+== Mon 10:10 UTC  new failure while the alert channel is down
+   raised 1, delivered to mock channel 0
+
+== Mon 10:15 UTC  channel back: the held alert is delivered
+   raised 0, delivered to mock channel 1
+   [CRITICAL] invoice-sync: failure: run 242 failed with exit 1 after 22.0s: ConnectionError: accounting API timed out after 30s
+
+== status
+   nightly-backup   ok                     open: none
+   invoice-sync     FAILED exit 1          open: failure
+   lead-import      ok                     open: none
+   report-export    ok                     open: none
+   cache-warm       ok                     open: none
+   review-digest    never ran              open: silence
+
+== alert table by kind
+   expected_exit          info      8
+   expected_exit_streak   warning   1
+   failure                critical  2
+   recovered              info      4
+   silence                critical  1
+   silence                warning   1
+   stuck                  warning   1
+   unregistered           warning   1
