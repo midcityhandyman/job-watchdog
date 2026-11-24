@@ -216,6 +216,10 @@ class Watchdog:
             if not self._deliver(row["id"], alert):
                 break  # channel is still down; do not hammer it
 
+    def undelivered(self) -> int:
+        """How many alerts are recorded but have not reached the channel."""
+        return self.conn.execute("SELECT COUNT(*) FROM alerts WHERE delivered = 0").fetchone()[0]
+
     # ---------------------------------------------------------------- status
 
     def status(self) -> list:

@@ -70,6 +70,10 @@ def record_run(
         code = _exit_code_of(exc)
         _finish(conn, run, started, clock, code, None if code == 0 else f"exited with {code}")
         raise
+    except KeyboardInterrupt:
+        # Ctrl-C or SIGINT: record it, or the row would look like a hung job.
+        _finish(conn, run, started, clock, 130, "KeyboardInterrupt: interrupted")
+        raise
     except Exception as exc:
         _finish(conn, run, started, clock, run.exit_code or 1, f"{type(exc).__name__}: {exc}")
         raise
@@ -81,7 +85,15 @@ def record_run(
 def run_command(
     conn: sqlite3.Connection, job: str, argv: Sequence[str], clock: Callable = utcnow
 ) -> int:
-    """Run an external command as `job` and record its exit code."""
+    """Run an external command as `job` and record its exit code.
+
+    A command that cannot be started (missing, not executable) is recorded as
+    a failed run with the shell's codes, 127 and 126, and the OSError is re-raised.
+    """
     with record_run(conn, job, clock) as run:
-        run.exit_code = subprocess.run(list(argv), check=False).returncode
+        try:
+            run.exit_code = subprocess.run(list(argv), check=False).returncode
+        except OSError as exc:
+            run.exit_code = 126 if isinstance(exc, PermissionError) else 127
+            raise
     return run.exit_code

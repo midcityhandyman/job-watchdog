@@ -43,7 +43,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if not command:
             print("nothing to run; usage: run --job NAME -- command args", file=sys.stderr)
             return 2
-        return run_command(conn, args.job, command)
+        try:
+            return run_command(conn, args.job, command)
+        except OSError as exc:
+            # Already recorded as a failed run; no traceback for a typo in a crontab.
+            print(f"cannot start {command[0]!r}: {exc}", file=sys.stderr)
+            return 126 if isinstance(exc, PermissionError) else 127
 
     try:
         jobs = load_jobs(args.jobs)
@@ -55,8 +60,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if args.command == "check":
         raised = dog.check()
         print(f"watchdog pass done: {len(raised)} new alert(s)")
-        # Exit 1 when something needs a human, so the watchdog can itself be watched.
-        return 1 if any(a.severity != "info" for a in raised) else 0
+        held = dog.undelivered()
+        if held:
+            print(f"{held} alert(s) could not be delivered and are held for the next pass",
+                  file=sys.stderr)
+        # Exit 1 when something needs a human or alerts are not getting out,
+        # so the watchdog can itself be watched.
+        return 1 if held or any(a.severity != "info" for a in raised) else 0
 
     for row in dog.status():
         flags = ", ".join(row["open_alerts"]) or "none"

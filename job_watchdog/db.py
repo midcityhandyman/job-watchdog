@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import sqlite3
 
+MIN_SQLITE = (3, 35, 0)  # the watchdog uses UPDATE ... RETURNING
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS runs (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,6 +38,11 @@ CREATE TABLE IF NOT EXISTS alerts (
 
 def connect(path: str = ":memory:") -> sqlite3.Connection:
     """Open the database and make sure the schema exists."""
+    if sqlite3.sqlite_version_info < MIN_SQLITE:
+        raise RuntimeError(
+            f"job-watchdog needs SQLite {'.'.join(map(str, MIN_SQLITE))} or newer "
+            f"(for UPDATE ... RETURNING); this Python is linked against {sqlite3.sqlite_version}"
+        )
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     conn.executescript(SCHEMA)

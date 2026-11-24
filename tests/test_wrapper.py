@@ -67,3 +67,21 @@ def test_run_command_records_the_real_exit_code(rig):
     assert last_run(rig.conn)["exit_code"] == 4
     assert run_command(rig.conn, "importer", [sys.executable, "-c", "pass"]) == 0
     assert last_run(rig.conn)["ok"] == 1
+
+
+def test_keyboard_interrupt_is_recorded_not_left_running(rig):
+    with pytest.raises(KeyboardInterrupt):
+        with record_run(rig.conn, "hourly", rig.clock):
+            raise KeyboardInterrupt
+    row = last_run(rig.conn)
+    assert row["finished_at"] is not None
+    assert row["ok"] == 0 and row["exit_code"] == 130
+    assert row["error"].startswith("KeyboardInterrupt")
+
+
+def test_run_command_records_a_command_that_cannot_start(rig):
+    with pytest.raises(OSError):
+        run_command(rig.conn, "hourly", ["no-such-command-job-watchdog-test"])
+    row = last_run(rig.conn)
+    assert row["ok"] == 0 and row["exit_code"] == 127
+    assert "Error" in row["error"]
